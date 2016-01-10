@@ -1,0 +1,88 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using MathNet.Numerics;
+using MathNet.Numerics.Distributions;
+
+namespace EuropeanCallOptionPricing1
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            //problem: calculate the price of an European Call option using Monte Carlo Simulation
+            // Model to be used : Geometric Brownian motion
+
+            // We assume a stock with $100 and expiry after a year, i.e., 365 days
+
+            // In this model, I am making assumptions for the variables
+            double ad = 0.10;           // annual drift of 10%
+            double av = 0.40;           // annual volatility
+            double S0 = 100.00;         // initial price in USD
+            double Xp = 100.00;         // exercise price in USD
+            double r = 0.03;            // risk free rate
+
+            // withs the above assumptions we derive the following parameters for the GBM
+
+            int t = 252;                // no.of days in a year
+            double dd = Math.Round(((ad / t)*100),4);       // 252 days in a year ; daily drift 
+            double sigma = Math.Round((av / Math.Sqrt(t)*100),2);    // standard deviation
+            int runs = 100;                          // no of iterations
+
+            double mean = Math.Round(dd -( 0.5 * Math.Pow(sigma, 2)/100), 4); // daily drift - 0.5*square of variance(daily volatility)
+
+            double result = mcPath(S0, sigma, mean, runs);
+            double CallPayOff = result - Xp;              // subtracting it from the exercise price
+
+            Double CallPayOffMean = CallPayOff / runs;        // calculating the mean of CallPayoff
+
+            double CallPrice = CallPayOffMean * Math.Exp(-r * (t / 365));      // t/365 -> year to maturity
+
+            double Profit = (CallPayOff - (CallPrice * (1+r)));                // Calculating the profit
+
+            Console.WriteLine("Call Pay Off : {0:C}    Call Price : {1:C}   Profit/Loss: {2:C} ", CallPayOff, CallPrice, Profit);
+            Console.ReadLine();
+
+         }
+        //double S0, double sigma, double mean,
+        static double  mcPath(double S0, double sigma, double mean, int runs)
+        {
+
+
+            //FileStream fs = new FileStream("C:/Users/Mask/Desktop/assetPath.txt", FileMode.CreateNew, FileAccess.Write);
+            //StreamWriter w = new StreamWriter(fs);
+
+            // to generate gaussian pseudo random variates
+            //Random rand = new Random();
+            
+            double[] prev_price = new double[runs];
+            prev_price[0] = S0;
+            //w.WriteLine(prev_price[0]);
+            double allPrice = prev_price[0];
+            //w.Close();
+            for (int i = 1; i < runs; i++)
+            {
+
+                double zscore = Normal.Sample(0.0, 1.0);
+                //double zscore = rand.NextDouble()*2-1;                // Zscore
+                double r_shock = sigma/100 * zscore;              // to calculate the random shock
+                prev_price[i] = prev_price[i-1] * (Math.Exp(mean + r_shock));
+                //File.AppendAllText("C:/Users/Mask/Desktop/assetPath.txt", prev_price[i].ToString());
+               //w.Write(prev_price[i]);
+               allPrice  += prev_price[i];              // sum of all prices to calculate the mean
+            }
+
+            double result = allPrice / runs;      // mean of all prices
+            //Console.WriteLine(result);
+
+            return result;
+
+
+        }
+
+    }
+        
+    }
